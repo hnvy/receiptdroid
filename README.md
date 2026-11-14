@@ -37,7 +37,7 @@ Please see
   <tr>
     <td align="center" width="25%"><img src="./screenshots/Target_Sample.jpg"><br><sub>Target</sub></td>
     <td align="center" width="25%"><img src="./screenshots/DollarGeneral_Sample.jpg"><br><sub>Dollar General</sub></td>
-    <td align="center" width="25%"><img src="./screenshots/7-eleven_Sample.jpg"><br><sub>7-Eleven</sub></td>
+    <td align="center" width="25%"><img src="./screenshots/7-eleven_Sample.jpg"><br><sub>7-Eleven (was probably found at the bottom of your bag)</sub></td>
   </tr>
 </table>
 
