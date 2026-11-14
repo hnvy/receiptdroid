@@ -6,6 +6,12 @@ on:
 #    tags: ["v*"]
 #  pull_request:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, like 1.2.3 or 1.2.3-beta.1 (blank: a development build)"
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -29,6 +35,9 @@ jobs:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - name: Set up JDK 17
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
@@ -39,11 +48,29 @@ jobs:
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       - name: Work out the version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
+          given="${INPUT_VERSION#"${INPUT_VERSION%%[![:space:]]*}"}"   # without spaces before…
+          given="${given%"${given##*[![:space:]]}"}"                   # …or after
+          given="${given#v}"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             name="${GITHUB_REF_NAME#v}"
+            from="The tag $GITHUB_REF_NAME"
+            # Run by hand on a tag: the release is named after the tag, so the APKs must be too.
+            if [[ -n "$given" && "$given" != "$name" ]]; then
+              echo "::error::This run is on the tag $GITHUB_REF_NAME, so its version is $name: leave the version blank, or run it on a branch"
+              exit 1
+            fi
+          elif [[ -n "$given" ]]; then
+            name="$given"
+            from="The version given ($given)"
+          else
+            name=""
+          fi
+          if [[ -n "$name" ]]; then
             if [[ ! "$name" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)?$ ]]; then
-              echo "::error::The tag $GITHUB_REF_NAME isn't a version like v1.2.3 or v1.2.3-beta.1"
+              echo "::error::$from isn't a version like 1.2.3 or 1.2.3-beta.1"
               exit 1
             fi
             # Base 10, so that 08 isn't read as a (bad) octal number.
@@ -54,7 +81,7 @@ jobs:
             fi
             code=$(( major * 10000 + minor * 100 + patch ))
             if (( code < 1 )); then
-              echo "::error::v0.0.0 has no version code: start at v0.0.1"
+              echo "::error::0.0.0 has no version code: start at 0.0.1"
               exit 1
             fi
           else
@@ -62,8 +89,11 @@ jobs:
             name="0.0.0-dev+${GITHUB_SHA::7}"
             code=1
           fi
-          echo "LEDGEDROID_VERSION_NAME=$name" >> "$GITHUB_ENV"
-          echo "LEDGEDROID_VERSION_CODE=$code" >> "$GITHUB_ENV"
+          {
+            echo "LEDGEDROID_VERSION_NAME=$name"
+            echo "LEDGEDROID_VERSION_CODE=$code"
+            echo "VERSION_GIVEN=${given:+yes}"
+          } >> "$GITHUB_ENV"
           echo "Version $name ($code)"
 
       - name: Set up release signing
@@ -75,7 +105,11 @@ jobs:
               echo "::error::A release needs the LEDGEDROID_KEYSTORE_BASE64 secret (and its passwords): without it, the APKs couldn't update an installed Receiptdroid"
               exit 1
             fi
-            echo "::notice::No release key: the release APKs are signed with a throwaway debug key"
+            if [[ -n "$VERSION_GIVEN" ]]; then
+              echo "::warning::No release key: these $LEDGEDROID_VERSION_NAME APKs are signed with a throwaway debug key, so they can't update an installed Receiptdroid"
+            else
+              echo "::notice::No release key: the release APKs are signed with a throwaway debug key"
+            fi
             exit 0
           fi
           keystore="$RUNNER_TEMP/release.jks"
