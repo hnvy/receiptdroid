@@ -16,6 +16,7 @@
 
 
 ## NOTE TO USER!
+- This is to be used with [Ledgedroid](https://github.com/hnvy/ledgedroid).
 - If Receiptdroid is useful to you, please consider [sponsoring
   hledger](https://hledger.org/sponsor.html).
 - Receiptdroid is not affiliated with hledger.
