@@ -17,6 +17,16 @@ data class JournalNames(
     /** The account [payee]'s transactions usually start with, if the journal has it. */
     fun usualFor(payee: String): String? = Payees.key(payee).takeIf { it.isNotEmpty() }?.let { usual[it] }
 
+    /** The journal's payee known by [key] (see [Payees.key]), as the journal spells it; the most used, if several. */
+    fun spelling(key: String): String? = index.byKey[key]
+
+    /**
+     * Each payee's key and words, worked out once, so that suggesting compares these and not the names: on
+     * every keystroke, with thousands of payees. Ready as soon as the journal's [read]; made on first use for
+     * names given otherwise.
+     */
+    internal val index: PayeeIndex by lazy { PayeeIndex(payees) }
+
     companion object {
         /**
          * Read [texts], the journal's files. Only what's needed for names: transactions' descriptions
@@ -30,6 +40,7 @@ data class JournalNames(
             val latest = HashMap<String, Pair<String, Int>>()
             val usual = HashMap<String, String>()
             val includes = ArrayList<String>()
+            val keys = HashMap<String, String>() // Each payee's key, worked out once however many transactions it has.
             var order = 0
 
             for (text in texts) {
@@ -54,7 +65,7 @@ data class JournalNames(
                         accountUses.merge(account, 1, Int::plus)
                         if (first) {
                             first = false
-                            val k = Payees.key(p)
+                            val k = keys.getOrPut(p) { Payees.key(p) }
                             val was = latest[k]
                             if (k.isNotEmpty() && (was == null || date > was.first || date == was.first && order > was.second)) {
                                 latest[k] = date to order
@@ -84,7 +95,8 @@ data class JournalNames(
                 }
             }
             fun ranked(uses: Map<String, Int>) = uses.entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key.lowercase() }).map { it.key }
-            return JournalNames(ranked(payeeUses), ranked(accountUses), usual, includes)
+            // Made here, while reading in the background, not on the first keystroke.
+            return JournalNames(ranked(payeeUses), ranked(accountUses), usual, includes).also { it.index }
         }
 
         // A transaction's first line: its date (and maybe =date2), maybe * or !, maybe (code), the description.
@@ -116,28 +128,33 @@ object Suggest {
     )
 
     /**
-     * Payees from [names] like [typed], best first: the same by [Payees.key], one starting the other,
+     * Payees from [journal] like [typed], best first: the same by [Payees.key], one starting the other,
      * sharing words, or containing it. Not [typed] itself.
      */
-    fun payees(typed: String, names: List<String>, limit: Int = 3): List<String> {
+    fun payees(typed: String, journal: JournalNames, limit: Int = 3): List<String> {
         val k = Payees.key(typed)
         if (k.isEmpty()) return emptyList()
         val words = k.split(' ').toSet()
-        return names.asSequence().filter { it != typed.trim() }.mapIndexedNotNull { rank, name ->
-            val nk = Payees.key(name)
-            if (nk.isEmpty()) return@mapIndexedNotNull null
-            val nw = nk.split(' ').toSet()
+        val telling = words.filter { it.length >= 3 && it !in GENERIC }
+        val name = typed.trim()
+        val index = journal.index
+        val found = ArrayList<Pair<Int, Int>>() // Score, and place in the journal's order (most used first).
+        for (i in index.names.indices) {
+            val nk = index.keys[i]
+            if (nk.isEmpty() || index.names[i] == name) continue
             val score = when {
                 nk == k -> 100
                 nk.startsWith(k) || k.startsWith(nk) -> 80
                 else -> {
-                    val shared = (nw intersect words).count { it.length >= 3 && it !in GENERIC }
+                    val nw = index.words[i]
+                    val shared = telling.count { it in nw }
                     if (shared > 0) 40 + 40 * shared / maxOf(nw.size, words.size)
                     else if (k.length >= 3 && nk.contains(k)) 50 else 0
                 }
             }
-            if (score >= 40) Triple(name, score, rank) else null
-        }.sortedWith(compareByDescending<Triple<String, Int, Int>> { it.second }.thenBy { it.third }).take(limit).map { it.first }.toList()
+            if (score >= 40) found.add(score to i)
+        }
+        return found.sortedWith(compareByDescending<Pair<Int, Int>> { it.first }.thenBy { it.second }).take(limit).map { index.names[it.second] }
     }
 
     /**
@@ -151,5 +168,16 @@ object Suggest {
         val starts = ordered.filter { a -> a.lowercase().let { it.startsWith(t) || it.split(':').any { part -> part.startsWith(t) } } }
         val contains = ordered.filter { it.lowercase().contains(t) && it !in starts }
         return (starts + contains).filter { !it.equals(typed.trim(), ignoreCase = true) }.take(limit)
+    }
+}
+
+/** A journal's payees with each one's [Payees.key] and the words in it, worked out once. */
+internal class PayeeIndex(payees: List<String>) {
+    val names: List<String> = payees
+    val keys: List<String> = payees.map { Payees.key(it) }
+    val words: List<Set<String>> = keys.map { if (it.isEmpty()) emptySet() else it.split(' ').toHashSet() }
+    /** The first payee (the most used) for each key. */
+    val byKey: Map<String, String> = HashMap<String, String>().also { m ->
+        for (i in payees.indices) if (keys[i].isNotEmpty()) m.putIfAbsent(keys[i], payees[i])
     }
 }

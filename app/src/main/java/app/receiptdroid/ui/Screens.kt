@@ -61,6 +61,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -88,6 +89,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.receiptdroid.Ledgedroid
 import app.receiptdroid.R
 import app.receiptdroid.core.Amounts
+import app.receiptdroid.core.JournalNames
 import app.receiptdroid.core.OcrLine
 import app.receiptdroid.core.Part
 import app.receiptdroid.core.Reading
@@ -95,6 +97,8 @@ import app.receiptdroid.core.ReceiptEntry
 import app.receiptdroid.core.ShareText
 import app.receiptdroid.core.Suggest
 import app.receiptdroid.ocr.ocrEngine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Types of file a receipt can come as, for choosing one from your files. */
 private val RECEIPT_FILES = arrayOf("application/pdf", "image/*", "text/plain", "text/html")
@@ -333,17 +337,33 @@ private class Actions(
 )
 
 /** Names to offer under the payee and account boxes. */
-private class Suggestions(val payees: List<String>, val accounts: List<String>, val usual: String?)
+private class Suggestions(val payees: List<String>, val accounts: List<String>, val usual: String?) {
+    companion object {
+        val NONE = Suggestions(emptyList(), emptyList(), null)
+    }
+}
 
+/**
+ * The names to offer for [entry], worked out away from the thread that draws the screen: typing never
+ * waits for them, and they follow a moment later, the last ones staying until then. Each keystroke's
+ * replaces the one before's.
+ */
 @Composable
 private fun rememberSuggestions(entry: ReceiptEntry, journal: JournalState, recent: List<String>): Suggestions {
     val names = journal.names.takeIf { journal.on }
-    val payees = remember(entry.payee, names) { names?.let { Suggest.payees(entry.payee, it.payees) }.orEmpty() }
-    val usual = remember(entry.payee, names) { names?.usualFor(entry.payee) }
-    val accounts = remember(entry.account, usual, names, recent) {
-        // Your journal's accounts, the payee's usual one first, then the ones you sent lately; or just those.
-        Suggest.accounts(entry.account, (recent + names?.accounts.orEmpty()).distinct(), listOfNotNull(usual))
+    val payee = entry.payee
+    val account = entry.account
+    val suggestions by produceState(Suggestions.NONE, payee, account, names, recent) {
+        value = withContext(Dispatchers.Default) { suggestionsFor(payee, account, names, recent) }
     }
+    return suggestions
+}
+
+private fun suggestionsFor(payee: String, account: String, names: JournalNames?, recent: List<String>): Suggestions {
+    val payees = names?.let { Suggest.payees(payee, it) }.orEmpty()
+    val usual = names?.usualFor(payee)
+    // Your journal's accounts, the payee's usual one first, then the ones you sent lately; or just those.
+    val accounts = Suggest.accounts(account, (recent + names?.accounts.orEmpty()).distinct(), listOfNotNull(usual))
     return Suggestions(payees, accounts, usual)
 }
 

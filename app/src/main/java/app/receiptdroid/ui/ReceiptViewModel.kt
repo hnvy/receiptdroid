@@ -284,9 +284,13 @@ class ReceiptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun pickFor(part: Part) = _form.update { it.copy(target = part) }
 
-    /** The boxes as typed in. A part that's typed over is no longer the line it was picked from. */
+    /**
+     * The boxes as typed in. A part that's typed over is no longer the line it was picked from. The marks
+     * stay the same map unless one goes, so that the receipt isn't drawn again for every keystroke.
+     */
     fun edit(entry: ReceiptEntry) = _form.update { f ->
-        f.copy(entry = entry, marks = f.marks - Part.entries.filter { valueOf(entry, it) != valueOf(f.entry, it) }.toSet())
+        val typedOver = Part.entries.filter { it in f.marks && valueOf(entry, it) != valueOf(f.entry, it) }
+        f.copy(entry = entry, marks = if (typedOver.isEmpty()) f.marks else f.marks - typedOver.toSet())
     }
 
     private fun valueOf(entry: ReceiptEntry, part: Part): String = when (part) {
@@ -305,7 +309,7 @@ class ReceiptViewModel(app: Application) : AndroidViewModel(app) {
         val e = ShareText.tidy(f.entry)
         if (e.account.isNotEmpty()) _accounts.value = (listOf(e.account) + _accounts.value.filter { it != e.account }).take(RECENT_ACCOUNTS)
         if (_tidy.value) {
-            f.payeeRead?.let { read -> Payees.learn(read, e.payee, _learned.value, journalPayees())?.let { (k, name) -> _learned.update { it + (k to name) } } }
+            f.payeeRead?.let { read -> Payees.learn(read, e.payee, _learned.value, journalNames())?.let { (k, name) -> _learned.update { it + (k to name) } } }
         }
         prefs.edit()
             .putString(KEY_CURRENCY, e.currency)
@@ -348,7 +352,7 @@ class ReceiptViewModel(app: Application) : AndroidViewModel(app) {
     // ------------------------------------------------------------------------------------- payee names
 
     /** [printed] as it goes in the payee box: tidied if that's on. */
-    private fun tidied(printed: String): String = if (_tidy.value) Payees.tidy(printed, _learned.value, journalPayees()) else printed
+    private fun tidied(printed: String): String = if (_tidy.value) Payees.tidy(printed, _learned.value, journalNames()) else printed
 
     fun setTidy(on: Boolean) {
         _tidy.value = on
@@ -362,7 +366,7 @@ class ReceiptViewModel(app: Application) : AndroidViewModel(app) {
 
     // ------------------------------------------------------------------------------------- your journal
 
-    private fun journalPayees(): List<String> = _journal.value.takeIf { it.on }?.names?.payees.orEmpty()
+    private fun journalNames(): JournalNames? = _journal.value.takeIf { it.on }?.names
 
     /** Suggest from the journal or not. Turning it on with no file chosen yet is for the screen to ask. */
     fun setJournal(on: Boolean) {
