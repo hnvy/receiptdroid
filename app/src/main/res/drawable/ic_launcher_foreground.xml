@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The receipt in pixel art, one viewport unit a pixel (2.16 dp): every pixel inside the adaptive icon's
+     66 dp safe circle, so no launcher's mask cuts into it. The background is @color/icon_background. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="50"
+    android:viewportHeight="50">
+    <!-- paper -->
+    <path
+        android:fillColor="#EDDBCA"
+        android:pathData="M17,13h17v1h-17zM17,14h12v1h-12zM31,14h2v1h-2zM17,15h11v1h-11zM32,15h1v1h-1zM17,16h10v1h-10zM17,17h10v1h-10zM17,18h1v1h-1zM25,18h3v1h-3zM32,18h1v1h-1zM17,19h1v1h-1zM25,19h4v1h-4zM31,19h2v1h-2zM17,20h16v1h-16zM17,21h1v1h-1zM29,21h4v1h-4zM17,22h1v1h-1zM29,22h4v1h-4zM17,23h16v1h-16zM17,24h1v1h-1zM27,24h6v1h-6zM17,25h1v1h-1zM27,25h6v1h-6zM17,26h16v1h-16zM16,27h17v1h-17zM16,28h1v1h-1zM16,29h17v1h-17zM16,30h2v1h-2zM21,30h5v1h-5zM32,30h2v1h-2zM16,31h10v1h-10zM32,31h2v1h-2zM16,32h18v1h-18zM16,33h6v1h-6zM23,33h2v1h-2zM27,33h6v1h-6zM16,34h5v1h-5zM22,34h3v1h-3zM26,34h1v1h-1zM30,34h5v1h-5zM15,35h1v1h-1zM17,35h1v1h-1zM19,35h1v1h-1zM21,35h1v1h-1zM24,35h1v1h-1zM27,35h3v1h-3zM31,35h3v1h-3zM17,36h1v1h-1zM25,36h2v1h-2zM28,36h1v1h-1zM30,36h2v1h-2z" />
+    <!-- its shaded left edge -->
+    <path
+        android:fillColor="#C9BAAB"
+        android:pathData="M16,13h1v1h-1zM16,14h1v1h-1zM16,15h1v1h-1zM16,16h1v1h-1zM16,17h1v1h-1zM16,18h1v1h-1zM16,19h1v1h-1zM16,20h1v1h-1zM16,21h1v1h-1zM16,22h1v1h-1zM16,23h1v1h-1zM16,24h1v1h-1zM16,25h1v1h-1zM16,26h1v1h-1z" />
+    <!-- its lit right edge -->
+    <path
+        android:fillColor="#FFEBD9"
+        android:pathData="M33,14h1v1h-1zM33,15h1v1h-1zM33,16h1v1h-1zM33,17h1v1h-1zM33,18h1v1h-1zM33,19h1v1h-1zM33,20h1v1h-1zM33,21h1v1h-1zM33,22h1v1h-1zM33,23h1v1h-1zM33,24h1v1h-1zM33,25h1v1h-1zM33,26h1v1h-1zM33,27h1v1h-1zM33,28h1v1h-1zM33,29h1v1h-1z" />
+    <!-- printed lines -->
+    <path
+        android:fillColor="#2D3D38"
+        android:pathData="M18,18h7v1h-7zM18,19h7v1h-7zM18,21h11v1h-11zM18,22h11v1h-11zM18,24h9v1h-9zM18,25h9v1h-9zM18,30h3v1h-3z" />
+    <!-- the blue rule -->
+    <path
+        android:fillColor="#5B6EE1"
+        android:pathData="M17,28h16v1h-16z" />
+    <!-- the total -->
+    <path
+        android:fillColor="#C2BA00"
+        android:pathData="M26,30h6v1h-6zM26,31h6v1h-6z" />
+    <!-- the coin -->
+    <path
+        android:fillColor="#FB8836"
+        android:pathData="M29,15h2v1h-2zM28,16h2v1h-2zM31,16h1v1h-1zM28,17h1v1h-1zM31,17h1v1h-1zM29,18h2v1h-2z" />
+    <!-- the coin's rim -->
+    <path
+        android:fillColor="#FBBC36"
+        android:pathData="M29,14h2v1h-2zM27,16h1v1h-1zM32,16h1v1h-1zM27,17h1v1h-1zM32,17h1v1h-1zM29,19h2v1h-2z" />
+    <!-- the coin's shadow -->
+    <path
+        android:fillColor="#B36127"
+        android:pathData="M28,15h1v1h-1zM31,15h1v1h-1zM28,18h1v1h-1zM31,18h1v1h-1z" />
+    <!-- the coin's shine -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,16h1v1h-1z" />
+</vector>

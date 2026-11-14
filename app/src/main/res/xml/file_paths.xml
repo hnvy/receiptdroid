@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Where the camera saves each photo it takes for the app: the receipts waiting (see ReceiptQueue). -->
+    <files-path name="queue" path="queue/" />
+</paths>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The receipt in one colour, for themed icons: the paper, with its printed lines, rule and total, and
+     the coin around its shine, cut out of it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="50"
+    android:viewportHeight="50">
+    <!-- paper, and the coin's shine -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16,13h18v1h-18zM16,14h13v1h-13zM31,14h3v1h-3zM16,15h12v1h-12zM32,15h2v1h-2zM16,16h11v1h-11zM30,16h1v1h-1zM33,16h1v1h-1zM16,17h11v1h-11zM33,17h1v1h-1zM16,18h2v1h-2zM25,18h3v1h-3zM32,18h2v1h-2zM16,19h2v1h-2zM25,19h4v1h-4zM31,19h3v1h-3zM16,20h18v1h-18zM16,21h2v1h-2zM29,21h5v1h-5zM16,22h2v1h-2zM29,22h5v1h-5zM16,23h18v1h-18zM16,24h2v1h-2zM27,24h7v1h-7zM16,25h2v1h-2zM27,25h7v1h-7zM16,26h18v1h-18zM16,27h18v1h-18zM16,28h1v1h-1zM33,28h1v1h-1zM16,29h18v1h-18zM16,30h2v1h-2zM21,30h5v1h-5zM32,30h2v1h-2zM16,31h10v1h-10zM32,31h2v1h-2zM16,32h18v1h-18zM16,33h6v1h-6zM23,33h2v1h-2zM27,33h6v1h-6zM16,34h5v1h-5zM22,34h3v1h-3zM26,34h1v1h-1zM30,34h5v1h-5zM15,35h1v1h-1zM17,35h1v1h-1zM19,35h1v1h-1zM21,35h1v1h-1zM24,35h1v1h-1zM27,35h3v1h-3zM31,35h3v1h-3zM17,36h1v1h-1zM25,36h2v1h-2zM28,36h1v1h-1zM30,36h2v1h-2z" />
+</vector>

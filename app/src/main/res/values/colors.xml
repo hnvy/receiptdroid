@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="paper">#F2F5EF</color>
+    <!-- Behind the launcher icon's receipt: the same as behind Ledgedroid's coin. -->
+    <color name="icon_background">#222034</color>
+    <color name="paper_dark">#111915</color>
+</resources>

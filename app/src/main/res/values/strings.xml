@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Receiptdroid</string>
+    <string name="read_receipt">Read receipt</string>
+    <string name="read_receipts">Read receipts</string>
+</resources>
