@@ -30,6 +30,16 @@
 Please see
 [here](https://github.com/hnvy/ledgedroid/tree/main#is-this-ai).
 
+## Quick glance
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="./screenshots/Target_Sample.jpg"><br><sub>Target</sub></td>
+    <td align="center" width="25%"><img src="./screenshots/DollarGeneral_Sample.jpg"><br><sub>Dollar General</sub></td>
+    <td align="center" width="25%"><img src="./screenshots/7-eleven_Sample.jpg"><br><sub>7-Eleven</sub></td>
+  </tr>
+</table>
+
 ## How to use it
 
 You can take several photos (the camera reopens after each until you
