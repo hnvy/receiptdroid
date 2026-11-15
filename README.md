@@ -33,6 +33,15 @@ Please see
 
 ## Quick glance
 
+- **_Fully_** offline and private; no ifs, buts, and maybes!
+- Quick and accurate.
+- Porbably the most customisable and intelligent receipt scanner out there.
+- Accepts photos, plain text, HTML, and PDF
+- Smart tidying feature.
+- Suggests from your journal (should you ask it to).
+- Can be integrated with other apps very easily
+- FOSS!
+
 <table>
   <tr>
     <td align="center" width="25%"><img src="./screenshots/Target_Sample.jpg"><br><sub>Target</sub></td>
@@ -96,15 +105,14 @@ For emailed receipts, any of these works:
   logging can only fail; the receipt, its text and the entry never
   leave the phone. Tesseract asks for no permissions in the first
   place. God I love FOSS.
-- **Receipts aren't kept.** Each receipt waiting (a photo taken, chosen
+- **Receipts aren't kept!** Each receipt waiting (a photo taken, chosen
   or shared, a PDF, an email's text) is copied into the app's own
   private storage, so a batch survives the app being closed, and is
   deleted as soon as it's sent or discarded.
-- **No cloud backup.** `allowBackup` is off, since the settings hold
-  account names from your journal.
-- **Ledgedroid is offline too:** its manifest asks only for
-  notifications and starting after a reboot.  The entry goes from this
-  app to Ledgedroid by Android's sharing, on the phone.
+- `allowBackup` is off, since the settings hold account names from
+   your journal.
+- **Ledgedroid is offline too:** The entry goes from this
+  app to Ledgedroid by Android's sharing, on the phone. Never online!
 
 The one way text can leave the app is your choice: **Share elsewhere**
 (or Send, when Ledgedroid isn't installed) hands the text to whichever
