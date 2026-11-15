@@ -159,11 +159,10 @@ In Ledgedroid: Settings › Share patterns › +, name it `Receipt`, and
 paste this as the pattern:
 
 ```
-    Receipt\s+Date: ?(?<date>[\d-]*)\s+Payee: ?(?<payee>.*)\s+Account: ?(?<account>.*)\s+Amount: ?(?<amount>-?[\d.]+) ?(?<currency>\S*)
+Receipt\s+Date: ?(?<date>[\d-]*)\s+Payee: ?(?<payee>.*)\s+Account: ?(?<account>.*)\s+Amount: ?(?<amount>-?[\d.]+) ?(?<currency>\S*)
 ```
 
-- Leave "start from a template" on None. With a template, quick add
-  takes the template's payee in place of the receipt's.
+- Leave "start from a template" on None.
 - If you have other patterns, move this one first, so a looser one
   doesn't take the text before it.
 
