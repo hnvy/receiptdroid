@@ -18,7 +18,8 @@ import kotlin.math.roundToInt
  * The OCR engine when `receipts.ocr=tesseract` (gradle.properties): Tesseract, through Tesseract4Android.
  * Open source throughout (Apache 2.0), with no Google code in the app. Its language data is in this folder's
  * assets/tessdata, inside the app: put another language's .traineddata there (from tesseract-ocr/tessdata_fast,
- * or tessdata_best for more accuracy at four times the size) and it's used as well.
+ * or tessdata_best for more accuracy at four times the size) and it's built in as well. People can also add
+ * their own in Settings, from files on the phone (see Languages, in TessLanguageFiles.kt).
  */
 
 /** This build's engine: Tesseract. */
@@ -27,10 +28,9 @@ fun createOcrEngine(context: Context): OcrEngine = TesseractEngine(context)
 private class TesseractEngine(private val context: Context) : OcrEngine {
     override val name = "Tesseract"
 
-    override suspend fun read(photo: Bitmap): List<OcrLine> {
-        val data = withContext(Dispatchers.IO) { TessData.install(context) }
-        return recognise(photo, data)
-    }
+    override val languages = Languages(context)
+
+    override suspend fun read(photo: Bitmap): List<OcrLine> = recognise(photo, languages.install())
 
     /**
      * Read [photo] on a thread of its own, as Tesseract works: one call that runs until it's done.
@@ -125,39 +125,5 @@ private class TesseractEngine(private val context: Context) : OcrEngine {
         const val LONGEST_SIDE = 3600f
         /** Lines Tesseract is less sure of than this (0–100) are left out. */
         const val MIN_CONFIDENCE = 30f
-    }
-}
-
-/**
- * Tesseract's language data. Tesseract reads it from a folder, so the files in the app's assets/tessdata
- * are copied to the app's own storage, once for each version of the app.
- */
-private class TessData(val path: String, val languages: String) {
-    companion object {
-        private const val ASSETS = "tessdata"
-        private const val SUFFIX = ".traineddata"
-
-        fun install(context: Context): TessData {
-            val names = context.assets.list(ASSETS).orEmpty().filter { it.endsWith(SUFFIX) }.sorted()
-            if (names.isEmpty()) throw IOException("No Tesseract language data in the app's assets/$ASSETS")
-            val root = File(context.filesDir, "tesseract")
-            val dir = File(root, ASSETS).apply { mkdirs() }
-            val version = File(root, "installed")
-            @Suppress("DEPRECATION") // longVersionCode needs API 28; lastUpdateTime changes with every install.
-            val current = context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime.toString()
-            if (!version.exists() || version.readText() != current || names.any { !File(dir, it).exists() }) {
-                dir.listFiles()?.forEach { it.delete() }
-                for (name in names) {
-                    // Copied beside, then renamed: never a half-copied file under the real name.
-                    val part = File(dir, "$name.part")
-                    context.assets.open("$ASSETS/$name").use { input -> part.outputStream().use { input.copyTo(it) } }
-                    if (!part.renameTo(File(dir, name))) throw IOException("Couldn't install $name")
-                }
-                version.writeText(current)
-            }
-            // English first, when it's there: the language receipts' labels and figures read best in.
-            val languages = names.map { it.removeSuffix(SUFFIX) }.sortedBy { if (it == "eng") 0 else 1 }
-            return TessData(root.absolutePath, languages.joinToString("+"))
-        }
     }
 }

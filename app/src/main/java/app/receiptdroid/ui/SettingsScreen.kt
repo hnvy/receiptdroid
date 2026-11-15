@@ -33,6 +33,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.receiptdroid.ocr.OcrLanguage
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.size
 
 /** Tidying payee names, suggesting from your journal, and setting up Ledgedroid. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +54,12 @@ fun SettingsScreen(
     onForgetJournal: () -> Unit,
     onSetup: () -> Unit,
     onBack: () -> Unit,
+    languages: List<OcrLanguage>? = null,
+    addingLanguage: Boolean = false,
+    onAddLanguage: () -> Unit = {},
+    onRemoveLanguage: (String) -> Unit = {},
+    onUseLanguage: (String, Boolean) -> Unit = { _, _ -> },
+    snackbar: SnackbarHostState? = null,
 ) {
     val rc = LocalReceiptColors.current
     var confirmForget by remember { mutableStateOf(false) }
@@ -59,6 +70,7 @@ fun SettingsScreen(
                 title = { Text("Settings", style = MaterialTheme.typography.titleLarge) },
             )
         },
+        snackbarHost = { snackbar?.let { SnackbarHost(it) } },
     ) { padding ->
         Column(
             Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -119,6 +131,11 @@ fun SettingsScreen(
             }
             HorizontalDivider()
 
+            if (languages != null) {
+                OcrLanguagesSection(languages, addingLanguage, onAddLanguage, onRemoveLanguage, onUseLanguage)
+                HorizontalDivider()
+            }
+
             Text("Ledgedroid", style = MaterialTheme.typography.titleMedium)
             Text("Receiptdroid sends each entry to Ledgedroid's quick add, which reads it with a Share pattern.", style = MaterialTheme.typography.bodyMedium)
             OutlinedButton(onClick = onSetup) { Text("Set up the Share pattern") }
@@ -153,3 +170,74 @@ private fun Toggle(title: String, text: String, on: Boolean, onChange: (Boolean)
         Switch(checked = on, onCheckedChange = onChange)
     }
 }
+
+/** Tesseract's languages: switch them on and off, add language data from a file, remove what you added. */
+@Composable
+private fun OcrLanguagesSection(
+    languages: List<OcrLanguage>,
+    adding: Boolean,
+    onAdd: () -> Unit,
+    onRemove: (String) -> Unit,
+    onUse: (String, Boolean) -> Unit,
+) {
+    val rc = LocalReceiptColors.current
+    var confirmRemove by remember { mutableStateOf<OcrLanguage?>(null) }
+    Text("Text recognition languages", style = MaterialTheme.typography.titleMedium)
+    Text(
+        "Receipts are read in the languages switched on. To add one, get Tesseract's language file for it (a .traineddata " +
+            "file, eg deu.traineddata for German) on any device, put it on this phone, and add it here. Receiptdroid can't " +
+            "download it itself: it has no internet access.",
+        style = MaterialTheme.typography.bodySmall,
+        color = rc.mutedInk,
+    )
+    Code("github.com/tesseract-ocr/tessdata_fast\ngithub.com/tesseract-ocr/tessdata_best")
+    Text(
+        "tessdata_fast is what's built in; tessdata_best reads a little better and is about four times the size. Adding " +
+            "eng.traineddata replaces the built-in English. Each language on makes reading slower: two or three is plenty.",
+        style = MaterialTheme.typography.bodySmall,
+        color = rc.mutedInk,
+    )
+    val onCount = languages.count { it.on }
+    languages.forEach { language ->
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(language.name, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    when {
+                        language.added && language.builtIn -> "Added by you, in place of the built-in one · ${megabytes(language.bytes)}"
+                        language.added -> "Added by you · ${megabytes(language.bytes)}"
+                        else -> "Built in · ${megabytes(language.bytes)}"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = rc.mutedInk,
+                )
+            }
+            if (language.added) TextButton(onClick = { confirmRemove = language }) { Text("Remove") }
+            // The last one on can't be switched off: receipts have to be read in something.
+            Switch(checked = language.on, onCheckedChange = { onUse(language.code, it) }, enabled = !(language.on && onCount <= 1))
+        }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedButton(onClick = onAdd, enabled = !adding) { Text("Add language data") }
+        if (adding) {
+            CircularProgressIndicator(Modifier.size(20.dp))
+            Text("Checking it…", style = MaterialTheme.typography.bodySmall, color = rc.mutedInk)
+        }
+    }
+    confirmRemove?.let { language ->
+        AlertDialog(
+            onDismissRequest = { confirmRemove = null },
+            title = { Text("Remove ${language.name}?") },
+            text = {
+                Text(
+                    if (language.builtIn) "The built-in ${language.name} comes back in its place."
+                    else "Receipts won't be read in it any more. You can add it again from its file.",
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmRemove = null; onRemove(language.code) }) { Text("Remove") } },
+            dismissButton = { TextButton(onClick = { confirmRemove = null }) { Text("Keep") } },
+        )
+    }
+}
+
+private fun megabytes(bytes: Long): String = if (bytes < 1_000_000) "${(bytes / 1000).coerceAtLeast(1)} kB" else "%.1f MB".format(bytes / 1_000_000.0)

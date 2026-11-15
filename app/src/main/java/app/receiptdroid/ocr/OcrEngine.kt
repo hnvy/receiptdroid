@@ -2,6 +2,7 @@ package app.receiptdroid.ocr
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import app.receiptdroid.core.OcrLine
 
 /**
@@ -26,6 +27,30 @@ interface OcrEngine {
      * In any order; empty when there's no text. Cancelling the call stops the work, as far as the engine can.
      */
     suspend fun read(photo: Bitmap): List<OcrLine>
+
+    /** The languages it reads, when you can add to them and choose among them (Tesseract's); else null. */
+    val languages: OcrLanguages? get() = null
+}
+
+/**
+ * A language an engine can read: [builtIn] if it came with the app, [added] if you added it (in place of
+ * the built-in one, when both), [on] if receipts are read in it, and its data's size.
+ */
+data class OcrLanguage(val code: String, val name: String, val builtIn: Boolean, val added: Boolean, val on: Boolean, val bytes: Long)
+
+/** Language data you can add to an engine yourself, from files on the phone: nothing is downloaded. */
+interface OcrLanguages {
+    /** The languages there are, in the order they're read in. */
+    suspend fun list(): List<OcrLanguage>
+
+    /** Add the language data at [uri]. Throws an IOException saying what's wrong, if it can't be used. */
+    suspend fun add(uri: Uri): OcrLanguage
+
+    /** Remove a language you added; a built-in one it replaced comes back. */
+    suspend fun remove(code: String)
+
+    /** Read receipts in [code] or not. The last one on stays on. */
+    suspend fun use(code: String, on: Boolean)
 }
 
 /** The engine this build has (from the folder `receipts.ocr` picks), for [context]'s app. */

@@ -36,10 +36,11 @@ data class ReceiptColors(
 }
 
 // The marks are drawn on the photo, which is white paper whatever the theme, so they're the same in both.
+// Lines not picked are a neutral grey, so that each part's colour is its own: none of them is the grey's.
 private val LightReceipt = ReceiptColors(
     mutedInk = Color(0xFF5E6E64),
-    unpicked = Color(0x802F5F8F),
-    payee = Color(0xFF2F5F8F),
+    unpicked = Color(0x80787878),
+    payee = Color(0xFF2F6FE4),
     date = Color(0xFFC9861E),
     amount = Color(0xFF2E8B57),
 )

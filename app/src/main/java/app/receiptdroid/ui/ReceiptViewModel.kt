@@ -23,6 +23,9 @@ import app.receiptdroid.core.ReadingStyle
 import app.receiptdroid.core.ReceiptEntry
 import app.receiptdroid.core.ShareText
 import app.receiptdroid.core.TextReceipt
+import app.receiptdroid.ocr.OcrLanguage
+import app.receiptdroid.ocr.OcrLanguages
+import app.receiptdroid.ocr.ocrEngine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -113,6 +116,13 @@ class ReceiptViewModel(app: Application) : AndroidViewModel(app) {
     private var journalUris: List<Uri> = prefs.getString(KEY_JOURNAL_URIS, "").orEmpty().split('\n').filter { it.isNotBlank() }.map(Uri::parse)
     private var journalReadAt = 0L
 
+    /** The OCR engine's languages, when you can add to them (Tesseract); null for an engine without. */
+    private val ocrLanguages = ocrEngine(app).languages
+    private val _languages = MutableStateFlow<List<OcrLanguage>?>(null)
+    val languages: StateFlow<List<OcrLanguage>?> = _languages.asStateFlow()
+    private val _addingLanguage = MutableStateFlow(false)
+    val addingLanguage: StateFlow<Boolean> = _addingLanguage.asStateFlow()
+
     private var reading: Job? = null
     /** The next receipt, read ahead while you look at this one. */
     private var ahead: Pair<String, Deferred<ReadReceipt>>? = null
@@ -120,6 +130,7 @@ class ReceiptViewModel(app: Application) : AndroidViewModel(app) {
     init {
         _journal.update { it.copy(files = journalUris.map { u -> JournalFiles.name(app, u) }) }
         refreshJournal(force = true)
+        refreshLanguages()
     }
 
     // ------------------------------------------------------------------------------------- adding receipts
@@ -420,6 +431,61 @@ class ReceiptViewModel(app: Application) : AndroidViewModel(app) {
                     { state.copy(reading = false, problem = it.message ?: "The journal couldn't be read") },
                 )
             }
+        }
+    }
+
+    // ------------------------------------------------------------------------------------- OCR languages
+
+    private fun refreshLanguages() {
+        val l = ocrLanguages ?: return
+        viewModelScope.launch {
+            _languages.value = try {
+                l.list()
+            } catch (e: IOException) {
+                _message.value = Message("The text-recognition languages couldn't be read: " + (e.message ?: "unknown reason"))
+                emptyList()
+            }
+        }
+    }
+
+    /** Add the language data you chose; tried before it's kept, and switched on. */
+    fun addLanguage(uri: Uri) {
+        val l = ocrLanguages ?: return
+        if (_addingLanguage.value) return
+        _addingLanguage.value = true
+        viewModelScope.launch {
+            try {
+                val added = l.add(uri)
+                _message.value = Message("${added.name} added: the next receipt is read in it too")
+            } catch (e: IOException) {
+                _message.value = Message(e.message ?: "That language data couldn't be added")
+            } finally {
+                _addingLanguage.value = false
+                // A reading ahead was made with the languages before.
+                ahead?.second?.cancel()
+                ahead = null
+                readAhead()
+                refreshLanguages()
+            }
+        }
+    }
+
+    fun removeLanguage(code: String) = changeLanguages { it.remove(code) }
+
+    fun useLanguage(code: String, on: Boolean) = changeLanguages { it.use(code, on) }
+
+    private fun changeLanguages(change: suspend (OcrLanguages) -> Unit) {
+        val l = ocrLanguages ?: return
+        viewModelScope.launch {
+            try {
+                change(l)
+            } catch (e: IOException) {
+                _message.value = Message(e.message ?: "The languages couldn't be changed")
+            }
+            ahead?.second?.cancel()
+            ahead = null
+            readAhead()
+            refreshLanguages()
         }
     }
 

@@ -120,6 +120,8 @@ fun ReceiptsApp(vm: ReceiptViewModel) {
     val tidy by vm.tidy.collectAsStateWithLifecycle()
     val learned by vm.learned.collectAsStateWithLifecycle()
     val journal by vm.journal.collectAsStateWithLifecycle()
+    val languages by vm.languages.collectAsStateWithLifecycle()
+    val addingLanguage by vm.addingLanguage.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
@@ -163,6 +165,8 @@ fun ReceiptsApp(vm: ReceiptViewModel) {
     val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED)) { uris -> vm.add(uris) }
     val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> vm.add(uris) }
     val journalFiles = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> vm.chooseJournal(uris) }
+    // A .traineddata file has no type of its own: any file, and the name says whether it's one.
+    val languageFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let { vm.addLanguage(it) } }
 
     val actions = Actions(
         takePhoto = { several = false; takePhoto() },
@@ -222,6 +226,18 @@ fun ReceiptsApp(vm: ReceiptViewModel) {
             onForgetJournal = vm::forgetJournal,
             onSetup = { showSetup = true },
             onBack = { showSettings = false },
+            languages = languages,
+            addingLanguage = addingLanguage,
+            onAddLanguage = {
+                try {
+                    languageFile.launch(arrayOf("*/*"))
+                } catch (e: ActivityNotFoundException) {
+                    vm.say("There's no app on this phone to choose files with")
+                }
+            },
+            onRemoveLanguage = vm::removeLanguage,
+            onUseLanguage = vm::useLanguage,
+            snackbar = snackbar,
         )
     } else {
         Scaffold(
@@ -543,7 +559,16 @@ private fun Photo(
                             drawRect(rc.unpicked, topLeft, box, style = Stroke(1.dp.toPx()))
                         } else {
                             drawRect(rc.of(part), topLeft, box, alpha = 0.3f)
-                            drawRect(rc.of(part), topLeft, box, style = Stroke(2.5.dp.toPx()))
+                            // Round the text, a little clear of it: the recognised box fits the letters
+                            // closely, and a thick line on its edge would cover them.
+                            val stroke = 2.5.dp.toPx()
+                            val gap = 2.dp.toPx() + stroke / 2
+                            drawRect(
+                                rc.of(part),
+                                Offset(topLeft.x - gap, topLeft.y - gap),
+                                Size(box.width + 2 * gap, box.height + 2 * gap),
+                                style = Stroke(stroke),
+                            )
                         }
                     }
                 }

@@ -70,6 +70,10 @@ android {
             java.srcDir("src/ocr-$ocrEngine/java")
             assets.srcDir("src/ocr-$ocrEngine/assets")
         }
+        // The engine's own tests, if it has any.
+        getByName("test") {
+            java.srcDir("src/ocr-$ocrEngine/test")
+        }
     }
     androidResources {
         // Tesseract's language data, kept as it is in the APK: it's compressed already, and copied out whole.
