@@ -114,7 +114,7 @@ app you pick.
 
 It basically utilises the `Share patterns` feature in Ledgedroid (read
 more
-[here](https://github.com/hnvy/ledgedroid#reminders-and-sharing)). It
+[here](https://github.com/hnvy/ledgedroid/blob/main/README.md#sharing-patterns)). It
 is all in plain text, shared to Ledgedroid like any other app shares
 text to it:
 
