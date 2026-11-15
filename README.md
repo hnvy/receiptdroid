@@ -35,7 +35,7 @@ Please see
 
 - **_Fully_** offline and private; no ifs, buts, and maybes!
 - Quick and accurate.
-- Porbably the most customisable and intelligent receipt scanner out there.
+- Probably the most customisable and intelligent receipt scanner out there.
 - Accepts photos, plain text, HTML, and PDF
 - Smart tidying feature.
 - Suggests from your journal (should you ask it to).
