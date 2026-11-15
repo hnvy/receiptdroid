@@ -53,6 +53,12 @@ interface OcrLanguages {
     suspend fun use(code: String, on: Boolean)
 }
 
+/**
+ * The engine failed, not the receipt: eg its language data couldn't be loaded. The receipt's kept waiting,
+ * to read again once that's put right (where a receipt whose file can't be opened is set aside).
+ */
+class OcrException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
 /** The engine this build has (from the folder `receipts.ocr` picks), for [context]'s app. */
 private var engine: OcrEngine? = null
 

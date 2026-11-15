@@ -9,7 +9,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
-import kotlin.concurrent.thread
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.math.roundToInt
@@ -30,31 +29,50 @@ private class TesseractEngine(private val context: Context) : OcrEngine {
 
     override val languages = Languages(context)
 
-    override suspend fun read(photo: Bitmap): List<OcrLine> = recognise(photo, languages.install())
+    override suspend fun read(photo: Bitmap): List<OcrLine> {
+        val data = try {
+            languages.install()
+        } catch (e: IOException) {
+            throw OcrException(e.message ?: "Tesseract's language data couldn't be put in place", e)
+        }
+        return recognise(photo, data)
+    }
+
+    /*
+     * A note on Tesseract4Android's native calls, since a mistake with them doesn't throw: it ends the app
+     * at once, with no error. Its JNI hands Tesseract's strings to Java unchecked, and Tesseract returns
+     * null for no text (getUTF8Text on an iterator where there's no word; getHOCRText when recognition
+     * was stopped), which aborts the app. And Tesseract asserts (aborting too) if an iterator's asked for
+     * the text or confidence of words that were never recognised: what's left after layout analysis alone,
+     * which getHOCRText then takes for a finished recognition. So below: recognition always on a fresh
+     * image, through meanConfidence (which returns a number, and recognises whatever's been done before);
+     * an iterator's text read only where its confidence says there's a word; and recognition never stopped.
+     */
 
     /**
-     * Read [photo] on a thread of its own, as Tesseract works: one call that runs until it's done.
-     * Cancelling stops it once recognition has started; before that, it's not started.
+     * Read [photo] with Tesseract, on its own thread, one reading at a time: a reading given up can't be
+     * stopped once it's running (see above), and two at once would need twice the memory. One given up
+     * before its turn isn't started.
      */
     private suspend fun recognise(photo: Bitmap, data: TessData): List<OcrLine> = suspendCancellableCoroutine { waiting ->
-        val api = TessBaseAPI()
-        val lock = Any()
-        var working = true // Guarded by lock: the api may be stopped until it's recycled.
-        waiting.invokeOnCancellation { synchronized(lock) { if (working) api.stop() } }
-        thread(name = "Tesseract", isDaemon = true) {
-            val result = runCatching { lines(api, photo, data) { waiting.isActive } }
-            synchronized(lock) {
-                working = false
+        worker.execute {
+            if (!waiting.isActive) return@execute
+            val api = TessBaseAPI()
+            val result = try {
+                Result.success(lines(api, photo, data) { waiting.isActive })
+            } catch (e: Exception) {
+                Result.failure(e)
+            } finally {
                 api.recycle()
             }
-            // When the reading was cancelled, these are ignored.
+            // When the reading was given up, these are ignored.
             result.onSuccess { waiting.resume(it) }.onFailure { waiting.resumeWithException(it) }
         }
     }
 
     private fun lines(api: TessBaseAPI, photo: Bitmap, data: TessData, going: () -> Boolean): List<OcrLine> {
         if (!api.init(data.path, data.languages, TessBaseAPI.OEM_LSTM_ONLY)) {
-            throw IOException("Tesseract couldn't load its language data (${data.languages})")
+            throw OcrException("Tesseract couldn't load its language data (${data.languages}). Check the languages in Settings.")
         }
         // A receipt is short lines spread across the paper, often a label at the left and its amount at the
         // right: sparse text finds each of them wherever it is, and ignores the table around the receipt.
@@ -68,10 +86,11 @@ private class TesseractEngine(private val context: Context) : OcrEngine {
         val image = if (scale == 1f) argb
         else Bitmap.createScaledBitmap(argb, (argb.width * scale).roundToInt(), (argb.height * scale).roundToInt(), true)
         try {
-            if (image !== argb) api.setImage(image)
+            // Set again even when it's the same picture: that clears the layout analysis, which recognition
+            // would otherwise take as done, leaving words never recognised (see above).
+            api.setImage(image)
             if (!going()) return emptyList()
-            // Recognises, and unlike getUTF8Text can be stopped (see recognise).
-            api.getHOCRText(0)
+            api.meanConfidence()
             if (!going()) return emptyList()
             return collect(api, scale)
         } finally {
@@ -82,8 +101,10 @@ private class TesseractEngine(private val context: Context) : OcrEngine {
 
     /** How much to enlarge the image by for its text lines to be about [LINE_HEIGHT] pixels tall: 1 or more. */
     private fun scaleFor(api: TessBaseAPI, image: Bitmap): Float {
-        val textlines = api.textlines ?: return 1f
+        val textlines = api.textlines
         val heights = try {
+            // No layout found (eg a blank photo): the Pixa wraps nothing, which must not be read.
+            if (textlines.nativePixa == 0L) return 1f
             textlines.boxRects.map { it.height() }.filter { it > 0 }.sorted()
         } finally {
             textlines.recycle()
@@ -103,8 +124,10 @@ private class TesseractEngine(private val context: Context) : OcrEngine {
         try {
             it.begin()
             do {
+                // Confidence first: it's 0 where there's no word, where the text would be null (see above).
+                if (it.confidence(level) < MIN_CONFIDENCE) continue
                 val text = it.getUTF8Text(level)?.trim().orEmpty()
-                if (text.none { c -> c.isLetterOrDigit() } || it.confidence(level) < MIN_CONFIDENCE) continue
+                if (text.none { c -> c.isLetterOrDigit() }) continue
                 // Left, top, right, bottom.
                 val box = it.getBoundingBox(level) ?: continue
                 out.add(OcrLine(text, box[0] / scale, box[1] / scale, box[2] / scale, box[3] / scale))
@@ -116,6 +139,10 @@ private class TesseractEngine(private val context: Context) : OcrEngine {
     }
 
     private companion object {
+        /** Where Tesseract works: one reading at a time. */
+        val worker: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+            Thread(r, "Tesseract").apply { isDaemon = true }
+        }
         /** Text lines shorter than this (in pixels) are enlarged… */
         const val SMALL_LINE = 22
         /** …to about this. */
