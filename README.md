@@ -19,6 +19,7 @@
 - This is to be used with [Ledgedroid](https://github.com/hnvy/ledgedroid).
 - If Receiptdroid is useful to you, please consider [sponsoring
   hledger](https://hledger.org/sponsor.html).
+  - Also consider giving a ⭐ (to help me get it accepted by F-Droid, Obtainium, etc. and hence giving you auto-update)
 - Receiptdroid is not affiliated with hledger.
 - The app icon was drawn using the beautiful
   [Aseprite](https://www.aseprite.org/). Buy it and you won't regret
